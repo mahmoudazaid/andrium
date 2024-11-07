@@ -1,0 +1,47 @@
+# Android Emulator Docker Environment
+
+This repository provides a Docker environment for setting up and running Android emulators. It enables configuring emulators with specific device models and settings, with automation scripts for starting and managing emulators.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Requirements](#requirements)
+- [Docker Image Details](#docker-image-details)
+- [Environment Variables](#environment-variables)
+- [Build and Run](#build-and-run)
+- [Script Details](#script-details)
+  - [create-emulator.sh](#create-emulatorsh)
+  - [start.sh](#startsh)
+- [Exposing Ports](#exposing-ports)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Overview
+
+This project enables building a Docker container with a fully configured Android emulator. It’s designed to streamline the creation and running of Android emulators with defined device types and configurations.
+
+## Requirements
+
+- **Docker**: Ensure Docker is installed on your system. See [Docker Installation Guide](https://docs.docker.com/get-docker/).
+
+## Docker Image Details
+
+The Docker image is based on `mahmoudazaid/android:15`, which includes the necessary dependencies for Android development. Additional dependencies are installed within this Dockerfile to support the emulator's display and network configurations.
+
+## Environment Variables
+
+Define the following environment variables to customize the emulator setup:
+
+| Variable           | Description                                   | Default Value   |
+|--------------------|-----------------------------------------------|-----------------|
+| `EMULATOR_NAME`    | The name of the Android emulator instance     | `emulator`      |
+| `EMULATOR_DEVICE`  | Device model for the emulator                 | `pixel_6`       |
+| `EMULATOR_TIMEOUT` | Timeout in seconds for the emulator to boot up | `300`           |
+| `EMULATOR_PACKAGE` | Android emulator system image package         | Defined in base image |
+
+## Build and Run
+
+1. **Build the Docker Image**:
+   ```bash
+   docker build -t your_dockerhub_username/android-emulator .
