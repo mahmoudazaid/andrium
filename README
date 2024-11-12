@@ -45,3 +45,7 @@ Define the following environment variables to customize the emulator setup:
 1. **Build the Docker Image**:
    ```bash
    docker build -t your_dockerhub_username/android-emulator .
+
+2. **Run Docker Image**:
+   ```bash
+   docker run -d --device /dev/kvm pixel6_android15
