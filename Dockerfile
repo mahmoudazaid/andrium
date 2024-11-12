@@ -18,9 +18,9 @@ SHELL ["/bin/bash", "-c"]
 # Emulator Configurations
 #=========================s
 # Emulator settings
-ENV EMULATOR_DEVICE="pixel_6"
-ENV EMULATOR_NAME="emu"
-ENV EMULATOR_TIMEOUT=300
+ARG EMULATOR_DEVICE="pixel_6"
+ARG EMULATOR_NAME="emu"
+ARG EMULATOR_TIMEOUT=300
 
 #====================================
 # Expose Ports for Emulator and ADB

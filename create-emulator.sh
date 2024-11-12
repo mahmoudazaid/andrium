@@ -7,8 +7,20 @@ YE='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Check if required environment variables are set
-if [ -z "${EMULATOR_NAME}" ] || [ -z "${EMULATOR_DEVICE}" ] || [ -z "${EMULATOR_PACKAGE}" ]; then
-    echo -e "${RED}Error: One or more required environment variables (EMULATOR_NAME, EMULATOR_DEVICE, EMULATOR_PACKAGE) are not set. Exiting.${NC}"
+if [ -z "${EMULATOR_NAME}" ]; then
+    echo -e "${RED}Error: One or more required environment variables (EMULATOR_NAME) are not set. Exiting.${NC}"
+    exit 1
+fi
+
+# Check if required environment variables are set
+if [ -z "${EMULATOR_DEVICE}" ]; then
+    echo -e "${RED}Error: One or more required environment variables (EMULATOR_DEVICE) are not set. Exiting.${NC}"
+    exit 1
+fi
+
+# Check if required environment variables are set
+if [ -z "${EMULATOR_PACKAGE}" ]; then
+    echo -e "${RED}Error: One or more required environment variables (EMULATOR_PACKAGE) are not set. Exiting.${NC}"
     exit 1
 fi
 
