@@ -8,20 +8,32 @@ NC='\033[0m' # No Color
 
 # Check if required environment variables are set
 if [ -z "${EMULATOR_NAME}" ] || [ -z "${EMULATOR_DEVICE}" ] || [ -z "${EMULATOR_PACKAGE}" ]; then
-    echo "One or more required environment variables (EMULATOR_NAME, EMULATOR_DEVICE, EMULATOR_PACKAGE) are not set. Exiting."
+    echo -e "${RED}Error: One or more required environment variables (EMULATOR_NAME, EMULATOR_DEVICE, EMULATOR_PACKAGE) are not set. Exiting.${NC}"
     exit 1
 fi
 
-#============================================
+# Ensure the AVD directory is set correctly
+if [ -z "$ANDROID_AVD_HOME" ]; then
+    export ANDROID_AVD_HOME="$HOME/.android/avd"
+fi
+
 # Create required emulator
-#============================================
-printf "${G}==>  ${BL}Creating Emulator With the following aspects:\n \
-         ${G}-name: ${YE}${EMULATOR_NAME} \n \
-         ${G}-Device type: ${YE}${EMULATOR_DEVICE} \n \
-         ${G}-Package: ${YE}${EMULATOR_PACKAGE}\
-<==${NC}\n"
+echo -e "${G}==> ${BL}Creating Emulator with the following details:${NC}"
+echo -e "${G}- Name: ${YE}${EMULATOR_NAME}${NC}"
+echo -e "${G}- Device: ${YE}${EMULATOR_DEVICE}${NC}"
+echo -e "${G}- Package: ${YE}${EMULATOR_PACKAGE}${NC}"
 
-if ! echo "no" | avdmanager --verbose create avd --force --name "${EMULATOR_NAME}" --device "${EMULATOR_DEVICE}" --package "${EMULATOR_PACKAGE}"; then
-    printf "${RED}Error: Failed to create emulator.${NC}\n"
+# Create the AVD using avdmanager
+if ! avdmanager --verbose create avd --force --name "${EMULATOR_NAME}" --device "${EMULATOR_DEVICE}" --package "${EMULATOR_PACKAGE}"; then
+    echo -e "${RED}Error: Failed to create emulator. Ensure the device and package are correct.${NC}"
     exit 1
 fi
+
+# Check if the .ini file exists for the created AVD
+AVD_INI_FILE="$ANDROID_AVD_HOME/${EMULATOR_NAME}.ini"
+if [ ! -f "$AVD_INI_FILE" ]; then
+    echo -e "${RED}Error: .ini file for AVD ${EMULATOR_NAME} not found at ${AVD_INI_FILE}. Exiting.${NC}"
+    exit 1
+fi
+
+echo -e "${G}==> Emulator ${EMULATOR_NAME} created successfully.${NC}"
