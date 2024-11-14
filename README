@@ -20,7 +20,10 @@ This project builds Docker images with Android emulators pre-configured for auto
 8. [Build and Run Variables](#build-and-run-variables)
    - [Build Variables](#build-variables)
    - [Run Variables](#run-variables)
-9. [Conclusion](#conclusion)
+9. [Usage Example](#usage-example)
+   - [Build Command](#build-command)
+   - [Run Command](#run-command)
+10. [Conclusion](#conclusion)
 
 ## Project Overview
 
@@ -99,7 +102,7 @@ Override `ANDROID_VERSION` and `EMULATOR_DEVICE` with your custom values:
 docker build --build-arg ANDROID_VERSION=<version> --build-arg EMULATOR_DEVICE=<device> -t your_dockerhub_username/emulator:<custom_version> .
 ```
 
-### Running Appium with Emulator
+## Running Appium with Emulator
 
 By default, Appium is not running inside the container. However, it can be started by setting the environment variable `APPIUM=true` .
 
@@ -121,16 +124,16 @@ docker run -e APPIUM=true your_dockerhub_username/emulator
 
 The emulator will launch, and Appium will be started automatically inside the container.
 
-### Emulator Startup Process
+## Emulator Startup Process
 
 Upon starting the container, the following process happens: 1. Emulator Creation: If the emulator does not exist, it is created based on the device and Android version specified. This process uses the Android AVD Manager. 2. Emulator Startup: The emulator starts in a headless mode (without a graphical interface), which makes it suitable for CI/CD environments. 3. Appium (Optional): If `APPIUM=true` is set, the Appium server is started automatically and can be used for automated testing.
 
-### Emulator Configuration
+## Emulator Configuration
 
     1. Timeout: The emulator waits for up to 300 seconds for the emulator to boot. You can modify this timeout by setting the `EMULATOR_TIMEOUT` environment variable.
     2. No Boot Animation: The emulator is started with no boot animation for faster startup.
 
-### Using as a Node in Device Farm
+## Using as a Node in Device Farm
 
 To use this Docker image as a node in a device farm, you will need to register this container as a node on your device farm hub.
 
@@ -142,15 +145,16 @@ To use this Docker image as a node in a device farm, you will need to register t
     - Environment Variables:
       - `APPIUM=true`
       - `EMULATOR_DEVICE=pixel_6`
-3. Connect Node to Hub: Follow your device farm's instructions for adding Docker-based nodes. Typically, you will need to configure the node to point to the hub's address, and the hub will handle the communication with the emulator nodes.
 
-4. Scaling: Add as many nodes as necessary to your device farm setup. Each node will run an emulator with the specified configuration, and you can dynamically scale the number of emulators as needed.
+3.  Connect Node to Hub: Follow your device farm's instructions for adding Docker-based nodes. Typically, you will need to configure the node to point to the hub's address, and the hub will handle the communication with the emulator nodes.
 
-# Build and Run Variables
+4.  Scaling: Add as many nodes as necessary to your device farm setup. Each node will run an emulator with the specified configuration, and you can dynamically scale the number of emulators as needed.
+
+## Build and Run Variables
 
 Below is a table that outlines the key variables you can use when building and running the Android Emulator with Appium.
 
-## Build Variables
+### Build Variables
 
 | **Variable**      | **Description**                                                  | **Default Value** | **Example** |
 | ----------------- | ---------------------------------------------------------------- | ----------------- | ----------- |
@@ -158,7 +162,7 @@ Below is a table that outlines the key variables you can use when building and r
 | `EMULATOR_DEVICE` | The name of the device to emulate (e.g., `pixel_6`, `Nexus_5X`). | `pixel_6`         | `Nexus_5X`  |
 | `CUSTOM_VERSION`  | The custom version tag for your Docker image.                    | `latest`          | `v1.0`      |
 
-## Run Variables
+### Run Variables
 
 | **Variable**       | **Description**                                          | **Default Value** | **Example** |
 | ------------------ | -------------------------------------------------------- | ----------------- | ----------- |
@@ -174,10 +178,29 @@ Below is a table that outlines the key variables you can use when building and r
 To build a custom image with a specific Android version and device, use the following command:
 
 ```bash
-docker build --build-arg ANDROID_VERSION=30 --build-arg EMULATOR_DEVICE=pixel_6 -t your_dockerhub_username/emulator:v1.0 .
+docker build --build-arg ANDROID_VERSION=30 --build-arg EMULATOR_DEVICE=pixel_6 -t emulator:v1.0 .
+```
+
+### Run Command
+
+To run a custom container with specific conditions (e.g., with Appium or without it), use the following command:
+
+```bash
+docker run -d -p "4723:4723" -e APPIUM=true emulator:v1.0
+```
+
+This will run the container with the emulator and Appium enabled. To run the emulator without Appium, set the `APPIUM=false` environment variable or don't mention to the command:
+
+```bash
+docker run -d -e APPIUM=false emulator:v1.0
+```
+
+OR
+
+```bash
+docker run -d emulator:v1.0
 ```
 
 ### Conclusion
 
 This Docker image provides an easy-to-deploy solution for running Android emulators with Appium for automated testing. You can use it as a part of a device farm setup and scale your testing efforts by adding more emulator nodes.
-```
