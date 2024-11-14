@@ -7,10 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version tag for the Docker image'
-        default: 'latest'
-  repository_dispatch:
-    types: [docker-image-updated]
+        description: "Version tag for the Docker image"
+        default: "latest"
 
 env:
   DOCKER_USERNAME: "mahmoudazaid"
@@ -45,6 +43,7 @@ jobs:
       - name: Extract EMULATOR_DEVICE and ANDROID_VERSION from Dockerfile
         id: extract_versions
         run: |
+          # Extract values from Dockerfile for tagging
           EMULATOR_DEVICE=$(grep -m 1 -E '^(LABEL|ENV|ARG)\s+EMULATOR_DEVICE=' Dockerfile | cut -d '=' -f2 | tr -d '"')
           ANDROID_VERSION=$(grep -m 1 -E '^(LABEL|ENV|ARG)\s+ANDROID_VERSION=' Dockerfile | cut -d '=' -f2 | tr -d '"')
           echo "EMULATOR_DEVICE=$EMULATOR_DEVICE"
@@ -65,6 +64,7 @@ jobs:
 
       - name: Install Docker Scout
         run: |
+          # Download and install Docker Scout for security scanning
           curl -fsSL ${{ env.DOCKER_SCOUT_URL }} | tar xz -C /usr/local/bin
           sudo chmod +x /usr/local/bin/docker-scout
           docker-scout version
