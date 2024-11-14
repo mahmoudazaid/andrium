@@ -1,25 +1,15 @@
-name: Docker Publish
+name: Docker Image Check
 
 on:
-  push:
+  pull_request:
     branches:
       - master
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version tag for the Docker image"
-        default: "latest"
-  repository_dispatch:
-    types: [docker-image-updated]
-
-env:
-  DOCKER_USERNAME: "mahmoudazaid"
-  DOCKER_SCOUT_URL: "https://github.com/docker/scout-cli/releases/download/v1.15.0/docker-scout_1.15.0_linux_amd64.tar.gz"
 
 jobs:
-  PUBLISH_DOCKER_IMAGE:
+  docker-build-run:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    env:
+      DOCKER_USERNAME: "mahmoudazaid"
 
     steps:
       - name: Checkout repository
@@ -28,55 +18,52 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Cache Docker layers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/docker
-          key: ${{ runner.os }}-docker-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-docker-
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Extract EMULATOR_DEVICE and ANDROID_VERSION from Dockerfile
-        id: extract_versions
+      - name: Build Docker image
         run: |
-          EMULATOR_DEVICE=$(grep -m 1 -E '^(LABEL|ENV|ARG)\s+EMULATOR_DEVICE=' Dockerfile | cut -d '=' -f2 | tr -d '"')
-          ANDROID_VERSION=$(grep -m 1 -E '^(LABEL|ENV|ARG)\s+ANDROID_VERSION=' Dockerfile | cut -d '=' -f2 | tr -d '"')
-          echo "EMULATOR_DEVICE=$EMULATOR_DEVICE"
-          echo "ANDROID_VERSION=$ANDROID_VERSION"
-          echo "EMULATOR_DEVICE=$EMULATOR_DEVICE" >> $GITHUB_ENV
-          echo "ANDROID_VERSION=$ANDROID_VERSION" >> $GITHUB_ENV
+          docker build -t emulator-image:${{ github.sha }} .
 
-      - name: Fail if required variables are not set
-        if: env.EMULATOR_DEVICE == '' || env.ANDROID_VERSION == ''
+      - name: Check if the Docker image runs
         run: |
-          echo "Error: EMULATOR_DEVICE or ANDROID_VERSION is missing in the Dockerfile."
-          exit 1
+          docker run -d -e APPIUM=true --device /dev/kvm --name emulator-container emulator-image:${{ github.sha }}
 
-      - name: Build Docker image with tag
-        run: |
-          echo "Building image with tag: ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }}"
-          docker build -t ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }} .
-         
-      - name: Install Docker Scout
-        run: |
-          curl -fsSL ${{ env.DOCKER_SCOUT_URL }} | tar xz -C /usr/local/bin
-          sudo chmod +x /usr/local/bin/docker-scout
-          docker-scout version
+          echo "Waiting for the container to start..."
+          sleep 10  
 
-      - name: Run Docker Scout to scan the images
-        run: |
-          docker-scout cves ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }}
+          # Check if container is running
+          if [[ $(docker ps -q -f name=emulator-container) ]]; then
+              echo "Container is up and running."
+          else
+              echo "Container failed to start."
+              exit 1
+          fi
 
-      - name: Push Docker images
-        run: |
-          docker push ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }}
+          # Check if the emulator is running
+          emulator_pid=$(docker exec emulator-container pgrep -f emulator)
+          if [ -z "$emulator_pid" ]; then
+              echo "Emulator is not running."
+              exit 1
+          else
+              echo "Emulator is running with PID: $emulator_pid"
+          fi
 
-      - name: Clean up Docker images
+          # Check if Appium is running
+          appium_pid=$(docker exec emulator-container pgrep -f appium)
+          if [ -z "$appium_pid" ]; then
+              echo "Appium is not running."
+              exit 1
+          else
+              echo "Appium is running with PID: $appium_pid"
+          fi
+
+          docker logs emulator-container
+
+      - name: Clean up
         run: |
-          docker image prune -af
+          docker stop emulator-container
+          docker rm emulator-container

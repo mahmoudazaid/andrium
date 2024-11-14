@@ -7,10 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version tag for the Docker image'
-        default: 'latest'
-  repository_dispatch:
-    types: [docker-image-updated]
+        description: "Version tag for the Docker image"
+        default: "latest"
 
 env:
   DOCKER_USERNAME: "mahmoudazaid"
@@ -42,40 +40,42 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Extract version from Dockerfile if not provided
-        id: extract_version
+      - name: Extract EMULATOR_DEVICE and ANDROID_VERSION from Dockerfile
+        id: extract_versions
         run: |
-          VERSION=$(grep -m 1 -E '^(LABEL|ENV|ARG)\s+ANDROID_VERSION=' Dockerfile | cut -d '=' -f2 | tr -d '"')
-          echo "VERSION=$VERSION"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV 
-      
-      - name: Fail if no version is set
-        if: env.VERSION == ''
+          # Extract values from Dockerfile for tagging
+          EMULATOR_DEVICE=$(grep -m 1 -E '^(LABEL|ENV|ARG)\s+EMULATOR_DEVICE=' Dockerfile | cut -d '=' -f2 | tr -d '"')
+          ANDROID_VERSION=$(grep -m 1 -E '^(LABEL|ENV|ARG)\s+ANDROID_VERSION=' Dockerfile | cut -d '=' -f2 | tr -d '"')
+          echo "EMULATOR_DEVICE=$EMULATOR_DEVICE"
+          echo "ANDROID_VERSION=$ANDROID_VERSION"
+          echo "EMULATOR_DEVICE=$EMULATOR_DEVICE" >> $GITHUB_ENV
+          echo "ANDROID_VERSION=$ANDROID_VERSION" >> $GITHUB_ENV
+
+      - name: Fail if required variables are not set
+        if: env.EMULATOR_DEVICE == '' || env.ANDROID_VERSION == ''
         run: |
-          echo "Error: ANDROID_VERSION is missed in the Dockerfile."
+          echo "Error: EMULATOR_DEVICE or ANDROID_VERSION is missing in the Dockerfile."
           exit 1
 
-      - name: Build Docker image
+      - name: Build Docker image with tag
         run: |
-          echo "VERSION=${{ env.VERSION }}"
-          docker build -t ${{ env.DOCKER_USERNAME }}/emulator:${{ env.VERSION }} .
-          docker build -t ${{ env.DOCKER_USERNAME }}/emulator:latest .
+          echo "Building image with tag: ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }}"
+          docker build -t ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }} .
 
       - name: Install Docker Scout
         run: |
+          # Download and install Docker Scout for security scanning
           curl -fsSL ${{ env.DOCKER_SCOUT_URL }} | tar xz -C /usr/local/bin
           sudo chmod +x /usr/local/bin/docker-scout
           docker-scout version
 
       - name: Run Docker Scout to scan the images
         run: |
-          docker-scout cves ${{ env.DOCKER_USERNAME }}/emulator:${{ env.VERSION }}
-          docker-scout cves ${{ env.DOCKER_USERNAME }}/emulator:latest
+          docker-scout cves ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }}
 
       - name: Push Docker images
         run: |
-          docker push ${{ env.DOCKER_USERNAME }}/emulator:${{ env.VERSION }}
-          docker push ${{ env.DOCKER_USERNAME }}/emulator:latest
+          docker push ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }}
 
       - name: Clean up Docker images
         run: |
