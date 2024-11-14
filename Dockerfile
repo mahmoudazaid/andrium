@@ -6,8 +6,10 @@ FROM mahmoudazaid/android:${ANDROID_VERSION}
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ="Europe/Berlin"
 
+ARG EMULATOR_DEVICE="pixel_6"
+
 # Set working directory
-WORKDIR /
+WORKDIR /opt
 
 #=================================
 # Install Essential Dependencies
@@ -39,43 +41,30 @@ RUN apt update && apt install --no-install-recommends -y \
     net-tools && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-#=========================
-# Emulator Configurations
-#=========================s
-# Emulator settings
-ENV EMULATOR_DEVICE="pixel_6"
-ENV EMULATOR_NAME="emu"
-ENV EMULATOR_TIMEOUT=300
-
-#====================================
-# Expose Ports for Emulator and ADB
-#====================================
-EXPOSE 5544 5554 5555
-
 #=============
 # Copy Scripts
 #=============
-COPY . /
+COPY . /opt/emulator
 
 #=============================
 # Set Permissions for Scripts
 #=============================
-RUN chmod a+x create-emulator.sh && \
-    chmod a+x start.sh
+RUN chmod +x /opt/emulator/create-emulator.sh && \
+    chmod +x /opt/emulator/start-emulator.sh &&\
+    chmod +x /opt/emulator/start.sh
 
 #====================================
 # Run SDK and Emulator Setup Scripts
-# ====================================
-RUN ./create-emulator.sh --EMULATOR_NAME "$EMULATOR_NAME" --EMULATOR_DEVICE "$EMULATOR_DEVICE" --EMULATOR_PACKAGE "$EMULATOR_PACKAGE"
-
+#====================================
+RUN /opt/emulator/create-emulator.sh --EMULATOR_DEVICE "$EMULATOR_DEVICE" --EMULATOR_PACKAGE "$EMULATOR_PACKAGE"
 
 #============================================
 # Clean up the installation files and caches
 #============================================
-RUN rm -f create-emulator \
+RUN rm -f /opt/emulator/create-emulator.sh && \
     rm -rf /tmp/* /var/tmp/*
 
 #=========================
 # Entry Command
 #=========================
-CMD ["./start.sh", "--EMULATOR_NAME=${EMULATOR_NAME}", "--EMULATOR_TIMEOUT=${EMULATOR_TIMEOUT}"]
+ENTRYPOINT ["/opt/emulator/start.sh"]
