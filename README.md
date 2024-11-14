@@ -2,6 +2,10 @@
 
 This project builds Docker images with Android emulators pre-configured for automated testing using Appium. These images can be used as nodes in a device farm setup and connected to a device-farm hub to scale testing across multiple emulators.
 
+# Badges
+
+[![Docker Publish](https://github.com/mahmoudazaid/android-emulator/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/mahmoudazaid/android-emulator/actions/workflows/docker-publish.yml)
+
 ## Table of Contents
 
 1. [Project Overview](#project-overview)
