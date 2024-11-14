@@ -35,11 +35,30 @@ jobs:
           echo "Waiting for the container to start..."
           sleep 10  
 
+          # Check if container is running
           if [[ $(docker ps -q -f name=emulator-container) ]]; then
               echo "Container is up and running."
           else
               echo "Container failed to start."
               exit 1
+          fi
+
+          # Check if the emulator is running
+          emulator_pid=$(docker exec emulator-container pgrep -f emulator)
+          if [ -z "$emulator_pid" ]; then
+              echo "Emulator is not running."
+              exit 1
+          else
+              echo "Emulator is running with PID: $emulator_pid"
+          fi
+
+          # Check if Appium is running
+          appium_pid=$(docker exec emulator-container pgrep -f appium)
+          if [ -z "$appium_pid" ]; then
+              echo "Appium is not running."
+              exit 1
+          else
+              echo "Appium is running with PID: $appium_pid"
           fi
 
           docker logs emulator-container
