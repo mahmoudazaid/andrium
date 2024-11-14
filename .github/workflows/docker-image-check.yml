@@ -30,7 +30,7 @@ jobs:
 
       - name: Check if the Docker image runs
         run: |
-          docker run -d -e APPIUM=true --name emulator-container emulator-image:${{ github.sha }}
+          docker run -d -e APPIUM=true --device /dev/kvm --name emulator-container emulator-image:${{ github.sha }}
 
           echo "Waiting for the container to start..."
           sleep 10  
