@@ -28,15 +28,18 @@ jobs:
         run: |
           if git diff --name-only HEAD~1 | grep -q "^Dockerfile$"; then
             echo "Dockerfile has changed."
+            echo "continue=true" >> $GITHUB_ENV
           else
-            echo "No changes in Dockerfile. Exiting..."
-            exit 0  # Exit the job early if no Dockerfile changes are detected
+            echo "No changes in Dockerfile. Skipping Docker build and push."
+            echo "continue=false" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        if: env.continue == 'true'
 
       - name: Cache Docker layers
         uses: actions/cache@v4
+        if: env.continue == 'true'
         with:
           path: ~/.cache/docker
           key: ${{ runner.os }}-docker-${{ github.sha }}
@@ -45,45 +48,50 @@ jobs:
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
+        if: env.continue == 'true'
         with:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract EMULATOR_DEVICE and ANDROID_VERSION from Dockerfile
+        if: env.continue == 'true'
         id: extract_versions
         run: |
-          # Extract values from Dockerfile for tagging
           EMULATOR_DEVICE=$(grep -m 1 -E '^(LABEL|ENV|ARG)\s+EMULATOR_DEVICE=' Dockerfile | cut -d '=' -f2 | tr -d '"')
           ANDROID_VERSION=$(grep -m 1 -E '^(LABEL|ENV|ARG)\s+ANDROID_VERSION=' Dockerfile | cut -d '=' -f2 | tr -d '"')
           echo "EMULATOR_DEVICE=$EMULATOR_DEVICE" >> $GITHUB_ENV
           echo "ANDROID_VERSION=$ANDROID_VERSION" >> $GITHUB_ENV
 
       - name: Fail if required variables are not set
-        if: env.EMULATOR_DEVICE == '' || env.ANDROID_VERSION == ''
+        if: env.continue == 'true' && (env.EMULATOR_DEVICE == '' || env.ANDROID_VERSION == '')
         run: |
           echo "Error: EMULATOR_DEVICE or ANDROID_VERSION is missing in the Dockerfile."
           exit 1
 
       - name: Build Docker image with tag
+        if: env.continue == 'true'
         run: |
           echo "Building image with tag: ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }}"
           docker build -t ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }} .
 
       - name: Install Docker Scout
+        if: env.continue == 'true'
         run: |
-          # Download and install Docker Scout for security scanning
           curl -fsSL ${{ env.DOCKER_SCOUT_URL }} | tar xz -C /usr/local/bin
           sudo chmod +x /usr/local/bin/docker-scout
           docker-scout version
 
       - name: Run Docker Scout to scan the images
+        if: env.continue == 'true'
         run: |
           docker-scout cves ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }}
 
       - name: Push Docker images
+        if: env.continue == 'true'
         run: |
           docker push ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }}
 
       - name: Clean up Docker images
+        if: env.continue == 'true'
         run: |
           docker image prune -af
