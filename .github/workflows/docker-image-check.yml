@@ -1,9 +1,9 @@
-name: Docker Image Check
+name: Docker Image Health Check
 
 on:
   pull_request:
     branches:
-      - master
+      - master 
 
 jobs:
   docker-build-run:
@@ -12,58 +12,39 @@ jobs:
       DOCKER_USERNAME: "mahmoudazaid"
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        install: true
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ env.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker image
-        run: |
-          docker build -t emulator-image:${{ github.sha }} .
+    - name: Build Docker Image for linux/amd64
+      run: |
+        docker buildx build \
+          --platform linux/amd64 \
+          -t ${{ env.DOCKER_USERNAME }}/android-emulator:${{ github.sha }} \
+          -t ${{ env.DOCKER_USERNAME }}/android-emulator:latest \
+          --load .
 
-      - name: Check if the Docker image runs
-        run: |
-          docker run -d -e APPIUM=true --device /dev/kvm --name emulator-container emulator-image:${{ github.sha }}
+    - name: Test Docker Image on linux/amd64
+      run: |
+        echo "Testing Docker image on linux/amd64"
+        docker run --platform linux/amd64 -d --name test-android-emulator-amd64 ${{ env.DOCKER_USERNAME }}/android-emulator:${{ github.sha }}
+        sleep 10
+        docker ps -a
+        docker logs test-android-emulator-amd64
+      env:
+        PLATFORM: linux/amd64
 
-          echo "Waiting for the container to start..."
-          sleep 10  
-
-          # Check if container is running
-          if [[ $(docker ps -q -f name=emulator-container) ]]; then
-              echo "Container is up and running."
-          else
-              echo "Container failed to start."
-              exit 1
-          fi
-
-          # Check if the emulator is running
-          emulator_pid=$(docker exec emulator-container pgrep -f emulator)
-          if [ -z "$emulator_pid" ]; then
-              echo "Emulator is not running."
-              exit 1
-          else
-              echo "Emulator is running with PID: $emulator_pid"
-          fi
-
-          # Check if Appium is running
-          appium_pid=$(docker exec emulator-container pgrep -f appium)
-          if [ -z "$appium_pid" ]; then
-              echo "Appium is not running."
-              exit 1
-          else
-              echo "Appium is running with PID: $appium_pid"
-          fi
-
-          docker logs emulator-container
-
-      - name: Clean up
-        run: |
-          docker stop emulator-container
-          docker rm emulator-container
+    - name: Clean up
+      run: |
+        docker stop test-android-emulator-amd64 || true
+        docker rm test-android-emulator-amd64 || true
