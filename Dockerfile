@@ -1,5 +1,5 @@
 # Set Build Tools and API Level
-ARG ANDROID_VERSION=9
+ARG ANDROID_VERSION=10
 FROM mahmoudazaid/android:${ANDROID_VERSION}
 
 #======================#
@@ -8,7 +8,7 @@ FROM mahmoudazaid/android:${ANDROID_VERSION}
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ="Europe/Berlin"
 
-ARG EMULATOR_DEVICE="pixel_2_xl"
+ARG EMULATOR_DEVICE="pixel"
 
 #=======================#
 # Set working directory #
