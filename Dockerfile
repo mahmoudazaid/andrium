@@ -8,7 +8,7 @@ FROM mahmoudazaid/android:${ANDROID_VERSION}
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ="Europe/Berlin"
 
-ARG EMULATOR_DEVICE="pixel"
+ARG EMULATOR_DEVICE="pixel_xl"
 
 #=======================#
 # Set working directory #
