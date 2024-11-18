@@ -60,7 +60,7 @@ jobs:
         run: |
           echo "Building multi-platform images for: ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }}"
           docker buildx build \
-            --platform linux/amd64,linux/arm64/v8 \
+            --platform linux/amd64 \
             -t ${{ env.DOCKER_USERNAME }}/emulator:${{ env.EMULATOR_DEVICE }}-android_${{ env.ANDROID_VERSION }} \
             -t ${{ env.DOCKER_USERNAME }}/emulator:latest \
             --push .
