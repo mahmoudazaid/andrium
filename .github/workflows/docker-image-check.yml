@@ -45,7 +45,7 @@ jobs:
             echo "Checking Appium server status"
             if ! docker exec test-android-emulator-amd64 curl --fail http://localhost:4723/status; then
               echo "Appium server did not start successfully."
-              docker logs test-appium-device-farm-amd64
+              docker logs test-android-emulator-amd64
               docker stop test-android-emulator-amd64 || true
               docker rm test-android-emulator-amd64 || true
               exit 1
