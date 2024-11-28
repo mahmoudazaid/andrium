@@ -38,7 +38,7 @@ jobs:
     - name: Test Docker Image on linux/amd64
       run: |
             echo "Testing Docker image on linux/amd64"
-            docker run --platform linux/amd64 -d -p "4723:4723" -e APPIUM=ture --device /dev/kvm --name test-android-emulator-amd64 ${{ env.DOCKER_USERNAME }}/android-emulator:${{ github.sha }}
+            docker run --platform linux/amd64 -d -p "4723:4723" -e APPIUM=true --device /dev/kvm --name test-android-emulator-amd64 ${{ env.DOCKER_USERNAME }}/android-emulator:${{ github.sha }}
             sleep 60  # Wait to ensure Appium and emulator have time to start.
             
             # Check if Appium server started successfully
