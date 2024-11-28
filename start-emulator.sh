@@ -21,7 +21,7 @@ function launch_emulator () {
     echo -e "${G}==> ${BL}Starting emulator: ${YE}${EMULATOR_NAME}${NC}"
 
     # Start emulator with specified parameters
-    if ! emulator -avd "${EMULATOR_NAME}" -no-window -no-snapshot -noaudio -camera-back emulated -no-boot-anim -memory 2048 -netspeed full -netdelay none; then
+    if ! emulator -avd "${EMULATOR_NAME}" -no-window -no-snapshot -noaudio -camera-back emulated -no-boot-anim -memory 2048; then
         echo -e "${RED}Error: Failed to launch emulator.${NC}"
         exit 1
     fi
