@@ -10,6 +10,7 @@ NC='\033[0m' # No Color
 # Emulator Configurations
 EMULATOR_NAME="${EMULATOR_NAME:-"emu"}"
 EMULATOR_TIMEOUT="${EMULATOR_TIMEOUT:-300}"
+NETWORK_CONNECTION="${NETWORK_CONNECTION:-"wifi"}"
 
 # Function to launch the emulator
 function launch_emulator () {
@@ -20,7 +21,7 @@ function launch_emulator () {
     echo -e "${G}==> ${BL}Starting emulator: ${YE}${EMULATOR_NAME}${NC}"
 
     # Start emulator with specified parameters
-    if ! emulator -avd "${EMULATOR_NAME}" -no-window -no-snapshot -noaudio -camera-back emulated -no-boot-anim -memory 2048; then
+    if ! emulator -avd "${EMULATOR_NAME}" -no-window -no-snapshot -noaudio -camera-back emulated -no-boot-anim -memory 2048 -netspeed full -netdelay none; then
         echo -e "${RED}Error: Failed to launch emulator.${NC}"
         exit 1
     fi
@@ -73,6 +74,39 @@ function hidden_policy() {
     adb shell "settings put global hidden_api_policy 1"
 }
 
+# Function to configure network based on environment variable
+function configure_network() {
+    echo -e "${G}==> ${BL}Configuring emulator network based on environment settings${NC}"
+
+    case "${NETWORK_CONNECTION}" in
+        "wifi")
+            echo -e "${G}==> ${YE}Enabling Wi-Fi and disabling mobile data${NC}"
+            adb shell svc wifi enable
+            adb shell svc data disable
+            ;;
+        "data")
+            echo -e "${G}==> ${YE}Disabling Wi-Fi and enabling mobile data${NC}"
+            adb shell svc wifi disable
+            adb shell svc data enable
+            ;;
+        *)
+            echo -e "${RED}Error: Invalid value for NETWORK_CONNECTION. Expected 'wifi' or 'data'.${NC}"
+            echo -e "${YE}Example:${NC} export NETWORK_CONNECTION=wifi or export NETWORK_CONNECTION=data${NC}"
+            exit 1
+            ;;
+    esac
+}
+
+# Function to check network connectivity (e.g., ping google.com)
+function check_network_connectivity() {
+    echo -e "${G}==> ${BL}Checking network connectivity${NC}"
+    if ! adb shell ping -c 4 google.com; then
+        echo -e "${RED}==> Network connectivity check failed!${NC}"
+        exit 1
+    fi
+    echo -e "${G}==> Network is connected!${NC}"
+}
+
 # Check if adb and emulator commands are available
 if ! command -v adb &> /dev/null || ! command -v emulator &> /dev/null; then
     echo -e "${RED}Error: 'adb' or 'emulator' command not found. Ensure Android SDK is installed and in PATH.${NC}"
@@ -90,3 +124,5 @@ launch_emulator
 check_emulator_status
 disable_animation
 hidden_policy
+configure_network
+check_network_connectivity
