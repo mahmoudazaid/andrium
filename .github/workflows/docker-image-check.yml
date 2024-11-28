@@ -3,7 +3,8 @@ name: Docker Image Health Check
 on:
   pull_request:
     branches:
-      - master 
+      - master
+      - develop 
 
 jobs:
   docker-build-run:
@@ -36,13 +37,33 @@ jobs:
 
     - name: Test Docker Image on linux/amd64
       run: |
-        echo "Testing Docker image on linux/amd64"
-        docker run --platform linux/amd64 -d --name test-android-emulator-amd64 ${{ env.DOCKER_USERNAME }}/android-emulator:${{ github.sha }}
-        sleep 10
-        docker ps -a
-        docker logs test-android-emulator-amd64
-      env:
-        PLATFORM: linux/amd64
+            echo "Testing Docker image on linux/amd64"
+            docker run --platform linux/amd64 -d -p "4723:4723" --device /dev/kvm --name test-android-emulator-amd64 ${{ env.DOCKER_USERNAME }}/android-emulator:${{ github.sha }}
+            sleep 60  # Wait to ensure Appium and emulator have time to start.
+            
+            # Check if Appium server started successfully
+            echo "Checking Appium server status"
+            if ! docker exec test-android-emulator-amd64 curl --fail http://localhost:4723/status; then
+              echo "Appium server did not start successfully."
+              docker logs test-appium-device-farm-amd64
+              docker stop test-android-emulator-amd64 || true
+              docker rm test-android-emulator-amd64 || true
+              exit 1
+            fi
+            echo "Appium server is running."
+
+            # Check if the emulator is running
+            echo "Checking Android emulator status..."
+            devices=$(docker exec test-android-emulator-amd64 adb devices || echo "fail")
+            echo "Devices found: $devices"
+            if ! echo "$devices" | grep -q "emulator"; then
+              echo "Error: No Android emulator is running."
+              docker logs test-android-emulator-amd64
+              docker stop test-android-emulator-amd64 || true
+              docker rm test-android-emulator-amd64 || true
+              exit 1
+            fi
+            echo "Android emulator is running."
 
     - name: Clean up
       run: |
