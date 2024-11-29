@@ -86,11 +86,12 @@ function hidden_policy() {
 
 # Function to configure network
 function configure_network() {
-    echo -e "${G}==> ${BL}Configuring emulator network for '${NETWORK_CONNECTION}'${NC}"
     if [[ "$NETWORK_CONNECTION" == "wifi" ]]; then
+        echo -e "${G}==> ${BL}Configuring emulator network for wifi${NC}"
         adb shell svc wifi enable
         adb shell svc data disable
     elif [[ "$NETWORK_CONNECTION" == "data" ]]; then
+        echo -e "${G}==> ${BL}Configuring emulator network for data${NC}"
         adb shell svc wifi disable
         adb shell svc data enable
     else
