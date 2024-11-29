@@ -86,6 +86,7 @@ function hidden_policy() {
 
 # Function to configure network
 function configure_network() {
+        adb root
         adb shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true
         sleep 30
         adb logcat | grep "AIRPLANE_MODE"
