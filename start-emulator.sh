@@ -109,6 +109,7 @@ function verify_network_status() {
         fi
         echo -e "${G}Wi-Fi is enabled and working.${NC}"
     elif [[ "$NETWORK_CONNECTION" == "data" ]]; then
+        adb shell dumpsys connectivity
         mobile_data_status=$(adb shell dumpsys connectivity | grep -A 10 "MOBILE" | grep "CONNECTED")
         if [[ -z "$mobile_data_status" ]]; then
             echo -e "${RED}Error: Mobile data is not connected.${NC}"
