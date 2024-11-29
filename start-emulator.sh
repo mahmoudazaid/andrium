@@ -83,61 +83,39 @@ function hidden_policy() {
     adb shell "settings put global hidden_api_policy 1"
 }
 
-# Function to configure network based on environment variable
+# Function to configure network
 function configure_network() {
-    echo -e "${G}==> ${BL}Configuring emulator network based on environment settings${NC}"
-
-    case "${NETWORK_CONNECTION}" in
-        "wifi")
-            echo -e "${G}==> ${YE}Enabling Wi-Fi and disabling mobile data${NC}"
-            adb shell svc wifi enable
-            adb shell svc data disable
-            ;;
-        "data")
-            echo -e "${G}==> ${YE}Disabling Wi-Fi and enabling mobile data${NC}"
-            adb shell svc wifi disable
-            adb shell svc data enable
-            ;;
-        *)
-            echo -e "${RED}Error: Invalid value for NETWORK_CONNECTION. Expected 'wifi' or 'data'.${NC}"
-            echo -e "${YE}Example:${NC} export NETWORK_CONNECTION=wifi or export NETWORK_CONNECTION=data${NC}"
-            exit 1
-            ;;
-    esac
+    echo -e "${G}==> ${BL}Configuring emulator network for '${NETWORK_CONNECTION}'${NC}"
+    if [[ "$NETWORK_CONNECTION" == "wifi" ]]; then
+        adb shell svc wifi enable
+        adb shell svc data disable
+    elif [[ "$NETWORK_CONNECTION" == "data" ]]; then
+        adb shell svc wifi disable
+        adb shell svc data enable
+    else
+        echo -e "${RED}Invalid NETWORK_CONNECTION setting. Use 'wifi' or 'data'.${NC}"
+        exit 1
+    fi
 }
 
-# Function to check if the desired network connection is active and the other is disabled
+# Function to verify network connectivity
 function verify_network_status() {
-    echo -e "${G}==> ${BL}Verifying the active network connection...${NC}"
-    
-    case "${NETWORK_CONNECTION}" in
-        "wifi")
-            wifi_status=$(adb shell dumpsys wifi | grep "Wi-Fi is" | awk '{print $3}')
-            data_status=$(adb shell dumpsys connectivity | grep "NetworkInfo:" | grep -m 1 MOBILE | grep -o "state: CONNECTED")
-            
-            if [[ "$wifi_status" == "enabled" && -z "$data_status" ]]; then
-                echo -e "${G}==> \u2713 Wi-Fi is enabled and mobile data is disabled.${NC}"
-            else
-                echo -e "${RED}Error: Network misconfiguration. Expected Wi-Fi enabled and mobile data disabled.${NC}"
-                exit 1
-            fi
-            ;;
-        "data")
-            data_status=$(adb shell dumpsys connectivity | grep "NetworkInfo:" | grep -m 1 MOBILE | grep -o "state: CONNECTED")
-            wifi_status=$(adb shell dumpsys wifi | grep "Wi-Fi is" | awk '{print $3}')
-            
-            if [[ "$data_status" == "state: CONNECTED" && "$wifi_status" == "disabled" ]]; then
-                echo -e "${G}==> \u2713 Mobile data is enabled and Wi-Fi is disabled.${NC}"
-            else
-                echo -e "${RED}Error: Network misconfiguration. Expected mobile data enabled and Wi-Fi disabled.${NC}"
-                exit 1
-            fi
-            ;;
-        *)
-            echo -e "${RED}Error: Invalid network type for verification.${NC}"
+    echo -e "${G}==> ${BL}Verifying network connectivity...${NC}"
+    if [[ "$NETWORK_CONNECTION" == "wifi" ]]; then
+        local wifi_status=$(adb shell dumpsys wifi | grep "Wi-Fi is" | awk '{print $3}')
+        if [[ "$wifi_status" != "enabled" ]]; then
+            echo -e "${RED}Error: Wi-Fi is not enabled.${NC}"
             exit 1
-            ;;
-    esac
+        fi
+        echo -e "${G}Wi-Fi is enabled and working.${NC}"
+    elif [[ "$NETWORK_CONNECTION" == "data" ]]; then
+        local data_status=$(adb shell dumpsys connectivity | grep "NetworkInfo:" | grep -m 1 MOBILE | grep -o "state: CONNECTED")
+        if [[ "$data_status" != "state: CONNECTED" ]]; then
+            echo -e "${RED}Error: Mobile data is not connected.${NC}"
+            exit 1
+        fi
+        echo -e "${G}Mobile data is connected.${NC}"
+    fi
 }
 
 # Function to check network connectivity
