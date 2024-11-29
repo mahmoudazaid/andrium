@@ -7,10 +7,14 @@ on:
       - develop 
 
 jobs:
-  docker-build-run:
+  build-and-test-containers:
     runs-on: ubuntu-latest
     env:
       DOCKER_USERNAME: "mahmoudazaid"
+
+    strategy:
+      matrix:
+        network_type: [wifi, data] # Define two types of network tests
 
     steps:
     - name: Checkout repository
@@ -29,43 +33,70 @@ jobs:
 
     - name: Build Docker Image for linux/amd64
       run: |
+        echo "Building Docker image with network type: ${{ matrix.network_type }}"
         docker buildx build \
           --platform linux/amd64 \
-          -t ${{ env.DOCKER_USERNAME }}/android-emulator:${{ github.sha }} \
-          -t ${{ env.DOCKER_USERNAME }}/android-emulator:latest \
+          -t ${{ env.DOCKER_USERNAME }}/android-emulator:${{ github.sha }}-${{ matrix.network_type }} \
+          --build-arg NETWORK_CONNECTION=${{ matrix.network_type }} \
           --load .
 
     - name: Test Docker Image on linux/amd64
       run: |
-            echo "Testing Docker image on linux/amd64"
-            docker run --platform linux/amd64 -d -p "4723:4723" -e APPIUM=true --device /dev/kvm --name test-android-emulator-amd64 ${{ env.DOCKER_USERNAME }}/android-emulator:${{ github.sha }}
-            sleep 60  # Wait to ensure Appium and emulator have time to start.
-            
-            # Check if Appium server started successfully
-            echo "Checking Appium server status"
-            if ! docker exec test-android-emulator-amd64 curl --fail http://localhost:4723/status; then
-              echo "Appium server did not start successfully."
-              docker logs test-android-emulator-amd64
-              docker stop test-android-emulator-amd64 || true
-              docker rm test-android-emulator-amd64 || true
-              exit 1
-            fi
-            echo "Appium server is running."
+        echo "Testing Docker image for network type: ${{ matrix.network_type }}"
+        docker run --platform linux/amd64 -d -p "4723:4723" -e APPIUM=true -e NETWORK_CONNECTION=${{ matrix.network_type }} --device /dev/kvm --name test-android-emulator-${{ matrix.network_type }} ${{ env.DOCKER_USERNAME }}/android-emulator:${{ github.sha }}-${{ matrix.network_type }}
+        sleep 60  # Wait for Appium and emulator to initialize.
 
-            # Check if the emulator is running
-            echo "Checking Android emulator status..."
-            devices=$(docker exec test-android-emulator-amd64 adb devices || echo "fail")
-            echo "Devices found: $devices"
-            if ! echo "$devices" | grep -q "emulator"; then
-              echo "Error: No Android emulator is running."
-              docker logs test-android-emulator-amd64
-              docker stop test-android-emulator-amd64 || true
-              docker rm test-android-emulator-amd64 || true
-              exit 1
-            fi
-            echo "Android emulator is running."
+        # Check if Appium server started successfully
+        echo "Checking Appium server status for ${{ matrix.network_type }}"
+        if ! docker exec test-android-emulator-${{ matrix.network_type }} curl --fail http://localhost:4723/status; then
+          echo "Appium server did not start successfully for ${{ matrix.network_type }}."
+          docker logs test-android-emulator-${{ matrix.network_type }}
+          docker stop test-android-emulator-${{ matrix.network_type }} || true
+          docker rm test-android-emulator-${{ matrix.network_type }} || true
+          exit 1
+        fi
+        echo "Appium server is running for ${{ matrix.network_type }}."
+
+        # Check if the emulator is running
+        echo "Checking Android emulator status for ${{ matrix.network_type }}..."
+        devices=$(docker exec test-android-emulator-${{ matrix.network_type }} adb devices || echo "fail")
+        echo "Devices found: $devices"
+        if ! echo "$devices" | grep -q "emulator"; then
+          echo "Error: No Android emulator is running for ${{ matrix.network_type }}."
+          docker logs test-android-emulator-${{ matrix.network_type }}
+          docker stop test-android-emulator-${{ matrix.network_type }} || true
+          docker rm test-android-emulator-${{ matrix.network_type }} || true
+          exit 1
+        fi
+        echo "Android emulator is running for ${{ matrix.network_type }}."
+
+        # Verify Wi-Fi or Mobile Data status
+        if [[ "${{ matrix.network_type }}" == "wifi" ]]; then
+          echo "Verifying Wi-Fi connectivity..."
+          wifi_status=$(docker exec test-android-emulator-${{ matrix.network_type }} adb shell dumpsys wifi | grep 'Wi-Fi is' | awk '{print $3}')
+          if [[ "$wifi_status" != "enabled" ]]; then
+            echo "Error: Wi-Fi is not enabled or connected."
+            docker logs test-android-emulator-${{ matrix.network_type }}
+            docker stop test-android-emulator-${{ matrix.network_type }} || true
+            docker rm test-android-emulator-${{ matrix.network_type }} || true
+            exit 1
+          fi
+          echo "Wi-Fi is enabled and connected."
+        elif [[ "${{ matrix.network_type }}" == "data" ]]; then
+          echo "Verifying Mobile Data connectivity..."
+          data_status=$(docker exec test-android-emulator-${{ matrix.network_type }} adb shell dumpsys connectivity | grep "NetworkInfo:" | grep -m 1 MOBILE | grep -o "state: CONNECTED")
+          if [[ "$data_status" != "state: CONNECTED" ]]; then
+            echo "Error: Mobile Data is not connected."
+            docker logs test-android-emulator-${{ matrix.network_type }}
+            docker stop test-android-emulator-${{ matrix.network_type }} || true
+            docker rm test-android-emulator-${{ matrix.network_type }} || true
+            exit 1
+          fi
+          echo "Mobile Data is enabled and connected."
+        fi
 
     - name: Clean up
       run: |
-        docker stop test-android-emulator-amd64 || true
-        docker rm test-android-emulator-amd64 || true
+        echo "Cleaning up container for network type: ${{ matrix.network_type }}"
+        docker stop test-android-emulator-${{ matrix.network_type }} || true
+        docker rm test-android-emulator-${{ matrix.network_type }} || true
