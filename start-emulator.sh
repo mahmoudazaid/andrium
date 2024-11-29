@@ -102,15 +102,15 @@ function configure_network() {
 function verify_network_status() {
     echo -e "${G}==> ${BL}Verifying network connectivity...${NC}"
     if [[ "$NETWORK_CONNECTION" == "wifi" ]]; then
-        local wifi_status=$(adb shell dumpsys wifi | grep "Wi-Fi is" | awk '{print $3}')
+        wifi_status=$(adb shell dumpsys wifi | grep "Wi-Fi is" | awk '{print $3}')
         if [[ "$wifi_status" != "enabled" ]]; then
             echo -e "${RED}Error: Wi-Fi is not enabled.${NC}"
             exit 1
         fi
         echo -e "${G}Wi-Fi is enabled and working.${NC}"
     elif [[ "$NETWORK_CONNECTION" == "data" ]]; then
-        local data_status=$(adb shell dumpsys connectivity | grep "NetworkInfo:" | grep -m 1 MOBILE | grep -o "state: CONNECTED")
-        if [[ "$data_status" != "state: CONNECTED" ]]; then
+        mobile_data_status=$(adb shell dumpsys connectivity | grep -A 10 "MOBILE" | grep "CONNECTED")
+        if [[ -z "$mobile_data_status" ]]; then
             echo -e "${RED}Error: Mobile data is not connected.${NC}"
             exit 1
         fi
