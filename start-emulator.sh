@@ -1,4 +1,4 @@
-#!/bin/bash
+o#!/bin/bash
 
 # Color codes for output
 BL='\033[0;34m'
@@ -8,27 +8,37 @@ YE='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Emulator Configurations
-EMULATOR_NAME="${EMULATOR_NAME:-"emu"}"
+EMULATOR_NAME="${EMULATOR_NAME:-emu}"
 EMULATOR_TIMEOUT="${EMULATOR_TIMEOUT:-300}"
-NETWORK_CONNECTION="${NETWORK_CONNECTION:-"wifi"}"
+MEMORY=${MEMORY:-2048}
+NETWORK_CONNECTION="${NETWORK_CONNECTION:-data}"
 
-# Function to launch the emulator
-function launch_emulator () {
+# Function to terminate existing emulator instances
+function terminate_existing_emulators() {
     echo -e "${G}==> ${BL}Terminating any existing emulator instances...${NC}"
     if adb devices | grep emulator; then
         adb devices | grep emulator | cut -f1 | xargs -I {} adb -s "{}" emu kill
     fi
+}
+
+# Function to launch the emulator
+function launch_emulator() {
+    terminate_existing_emulators
     echo -e "${G}==> ${BL}Starting emulator: ${YE}${EMULATOR_NAME}${NC}"
 
     # Start emulator with specified parameters
-    if ! emulator -avd "${EMULATOR_NAME}" -no-window -no-snapshot -noaudio -camera-back emulated -no-boot-anim -memory 2048; then
-        echo -e "${RED}Error: Failed to launch emulator.${NC}"
+    emulator -avd "${EMULATOR_NAME}" -no-window -no-snapshot -noaudio -camera-back emulated -no-boot-anim -memory $MEMORY &
+    sleep 5
+
+    # Ensure the emulator started successfully
+    if ! pgrep -f "${EMULATOR_NAME}" &> /dev/null; then
+        echo -e "${RED}Error: Failed to start the emulator. Please check your configuration.${NC}"
         exit 1
     fi
 }
 
 # Function to check if the emulator has fully booted
-function check_emulator_status () {
+function check_emulator_status() {
     echo -e "${G}==> ${BL}Checking emulator boot status 🧐${NC}"
     start_time=$(date +%s)
     spinner=( "⠹" "⠺" "⠼" "⠶" "⠦" "⠧" "⠇" "⠏" )
@@ -74,33 +84,55 @@ function hidden_policy() {
     adb shell "settings put global hidden_api_policy 1"
 }
 
-# Function to configure network based on environment variable
+# Function to configure network
 function configure_network() {
-    echo -e "${G}==> ${BL}Configuring emulator network based on environment settings${NC}"
-
-    case "${NETWORK_CONNECTION}" in
-        "wifi")
-            echo -e "${G}==> ${YE}Enabling Wi-Fi and disabling mobile data${NC}"
-            adb shell svc wifi enable
-            adb shell svc data disable
-            ;;
-        "data")
-            echo -e "${G}==> ${YE}Disabling Wi-Fi and enabling mobile data${NC}"
-            adb shell svc wifi disable
-            adb shell svc data enable
-            ;;
-        *)
-            echo -e "${RED}Error: Invalid value for NETWORK_CONNECTION. Expected 'wifi' or 'data'.${NC}"
-            echo -e "${YE}Example:${NC} export NETWORK_CONNECTION=wifi or export NETWORK_CONNECTION=data${NC}"
-            exit 1
-            ;;
-    esac
+        adb root
+        adb shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true
+        sleep 30
+        adb logcat | grep "AIRPLANE_MODE"
+    if [[ "$NETWORK_CONNECTION" == "wifi" ]]; then
+        echo -e "${G}==> ${BL}Configuring emulator network for wifi${NC}"
+        adb shell svc wifi enable
+        adb shell svc data disable
+    elif [[ "$NETWORK_CONNECTION" == "data" ]]; then
+        echo -e "${G}==> ${BL}Configuring emulator network for data${NC}"
+        adb shell svc wifi disable
+        adb shell svc data enable
+    else
+        echo -e "${RED}Invalid NETWORK_CONNECTION setting. Use 'wifi' or 'data'.${NC}"
+        exit 1
+    fi
 }
 
-# Function to check network connectivity (e.g., ping google.com)
+# Function to verify network connectivity
+function verify_network_status() {
+    echo -e "${G}==> ${BL}Verifying network connectivity...${NC}"
+    if [[ "$NETWORK_CONNECTION" == "wifi" ]]; then
+        wifi_status=$(adb shell dumpsys wifi | grep "Wi-Fi is" | awk '{print $3}')
+        if [[ "$wifi_status" != "enabled" ]]; then
+            echo -e "${RED}Error: Wi-Fi is not enabled.${NC}"
+            exit 1
+        fi
+        echo -e "${G}Wi-Fi is enabled and working.${NC}"
+    elif [[ "$NETWORK_CONNECTION" == "data" ]]; then
+        echo "run adb shell dumpsys connectivity"
+        adb shell dumpsys connectivity
+        echo "end of adb shell dumpsys connectivity"
+        mobile_data_status=$(adb shell dumpsys connectivity | grep -A 10 "MOBILE" | grep "CONNECTED")
+        echo "return mobile_data_status " $mobile_data_status
+        echo "end of mobile_data_status"
+        if [[ -z "$mobile_data_status" ]]; then
+            echo -e "${RED}Error: Mobile data is not connected.${NC}"
+            exit 1
+        fi
+        echo -e "${G}Mobile data is connected.${NC}"
+    fi
+}
+
+# Function to check network connectivity
 function check_network_connectivity() {
-    echo -e "${G}==> ${BL}Checking network connectivity${NC}"
-    if ! adb shell ping -c 4 google.com; then
+    echo -e "${G}==> ${BL}Checking network connectivity...${NC}"
+    if ! adb shell ping -c 4 8.8.8.8 &> /dev/null; then
         echo -e "${RED}==> Network connectivity check failed!${NC}"
         exit 1
     fi
@@ -125,4 +157,5 @@ check_emulator_status
 disable_animation
 hidden_policy
 configure_network
+verify_network_status
 check_network_connectivity
