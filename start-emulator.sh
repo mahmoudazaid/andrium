@@ -10,6 +10,7 @@ NC='\033[0m' # No Color
 # Emulator Configurations
 EMULATOR_NAME="${EMULATOR_NAME:-emu}"
 EMULATOR_TIMEOUT="${EMULATOR_TIMEOUT:-300}"
+MEMORY=${MEMORY:-2048}
 NETWORK_CONNECTION="${NETWORK_CONNECTION:-wifi}"
 
 # Function to terminate existing emulator instances
@@ -26,7 +27,7 @@ function launch_emulator() {
     echo -e "${G}==> ${BL}Starting emulator: ${YE}${EMULATOR_NAME}${NC}"
 
     # Start emulator with specified parameters
-    emulator -avd "${EMULATOR_NAME}" -no-window -no-snapshot -noaudio -camera-back emulated -no-boot-anim -memory 2048 &
+    emulator -avd "${EMULATOR_NAME}" -no-window -no-snapshot -noaudio -camera-back emulated -no-boot-anim -memory $MEMORY &
     sleep 5
 
     # Ensure the emulator started successfully
@@ -111,6 +112,7 @@ function verify_network_status() {
     elif [[ "$NETWORK_CONNECTION" == "data" ]]; then
         adb shell dumpsys connectivity
         mobile_data_status=$(adb shell dumpsys connectivity | grep -A 10 "MOBILE" | grep "CONNECTED")
+        echo $mobile_data_status
         if [[ -z "$mobile_data_status" ]]; then
             echo -e "${RED}Error: Mobile data is not connected.${NC}"
             exit 1
