@@ -88,10 +88,12 @@ function hidden_policy() {
 function configure_network() {
     if [[ "$NETWORK_CONNECTION" == "wifi" ]]; then
         echo -e "${G}==> ${BL}Configuring emulator network for wifi${NC}"
+        adb shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true
         adb shell svc wifi enable
         adb shell svc data disable
     elif [[ "$NETWORK_CONNECTION" == "data" ]]; then
         echo -e "${G}==> ${BL}Configuring emulator network for data${NC}"
+        adb shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true
         adb shell svc wifi disable
         adb shell svc data enable
     else
