@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - master
-      - develop
+      - develop 
 
 jobs:
   build-and-test-containers:
@@ -85,9 +85,14 @@ jobs:
         elif [[ "${{ matrix.network_type }}" == "data" ]]; then
           echo "Verifying Mobile Data connectivity..."
 
-          # Adjusted command to verify mobile data state
-          mobile_data_status=$(docker exec test-android-emulator-${{ matrix.network_type }} adb shell dumpsys connectivity | grep -A 10 "MOBILE" | grep -o "CONNECTED")
-          if [[ -z "$mobile_data_status" ]]; then
+          # Adding extra sleep time for mobile network initialization
+          sleep 30  # Allow more time for mobile data to initialize
+
+          # Improved Mobile Data Status check
+          mobile_data_status=$(docker exec test-android-emulator-${{ matrix.network_type }} adb shell dumpsys connectivity | grep -A 10 "MOBILE" | grep -o "CONNECTED" || echo "fail")
+          
+          # Check if mobile data is truly connected
+          if [[ "$mobile_data_status" != "CONNECTED" ]]; then
             echo "Error: Mobile Data is not connected."
             docker logs test-android-emulator-${{ matrix.network_type }}
             docker stop test-android-emulator-${{ matrix.network_type }} || true
