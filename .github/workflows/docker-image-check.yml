@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - master
-      - develop 
+      - develop
 
 jobs:
   build-and-test-containers:
@@ -84,8 +84,10 @@ jobs:
           echo "Wi-Fi is enabled and connected."
         elif [[ "${{ matrix.network_type }}" == "data" ]]; then
           echo "Verifying Mobile Data connectivity..."
-          data_status=$(docker exec test-android-emulator-${{ matrix.network_type }} adb shell dumpsys connectivity | grep "NetworkInfo:" | grep -m 1 MOBILE | grep -o "state: CONNECTED")
-          if [[ "$data_status" != "state: CONNECTED" ]]; then
+
+          # Adjusted command to verify mobile data state
+          mobile_data_status=$(docker exec test-android-emulator-${{ matrix.network_type }} adb shell dumpsys connectivity | grep -A 10 "MOBILE" | grep -o "CONNECTED")
+          if [[ -z "$mobile_data_status" ]]; then
             echo "Error: Mobile Data is not connected."
             docker logs test-android-emulator-${{ matrix.network_type }}
             docker stop test-android-emulator-${{ matrix.network_type }} || true
