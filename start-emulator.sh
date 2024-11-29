@@ -1,4 +1,4 @@
-#!/bin/bash
+o#!/bin/bash
 
 # Color codes for output
 BL='\033[0;34m'
@@ -110,9 +110,12 @@ function verify_network_status() {
         fi
         echo -e "${G}Wi-Fi is enabled and working.${NC}"
     elif [[ "$NETWORK_CONNECTION" == "data" ]]; then
+        echo "run adb shell dumpsys connectivity"
         adb shell dumpsys connectivity
+        echo "end of adb shell dumpsys connectivity"
         mobile_data_status=$(adb shell dumpsys connectivity | grep -A 10 "MOBILE" | grep "CONNECTED")
-        echo $mobile_data_status
+        echo "return mobile_data_status " $mobile_data_status
+        echo "end of mobile_data_status"
         if [[ -z "$mobile_data_status" ]]; then
             echo -e "${RED}Error: Mobile data is not connected.${NC}"
             exit 1
