@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 # Emulator Configurations
 EMULATOR_NAME="${EMULATOR_NAME:-emu}"
 EMULATOR_TIMEOUT="${EMULATOR_TIMEOUT:-300}"
-NETWORK_CONNECTION="${NETWORK_CONNECTION:-wifi}" # Default to 'data'
+NETWORK_CONNECTION="${NETWORK_CONNECTION:-wifi}"
 
 # Function to terminate existing emulator instances
 function terminate_existing_emulators() {
